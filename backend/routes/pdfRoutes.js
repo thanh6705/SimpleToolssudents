@@ -45,14 +45,62 @@ const upload = multer({
   },
 });
 
+const configuredConcurrency = Number.parseInt(process.env.PDF_CONCURRENCY, 10);
+const maxConcurrentJobs = Number.isInteger(configuredConcurrency) && configuredConcurrency > 0
+  ? configuredConcurrency
+  : 2;
+let activeJobs = 0;
+const waitingJobs = [];
+
+const startNextJob = () => {
+  if (activeJobs >= maxConcurrentJobs || waitingJobs.length === 0) return;
+
+  const startJob = waitingJobs.shift();
+  startJob();
+};
+
+const limitPdfConcurrency = (req, res, next) => {
+  const run = () => {
+    activeJobs += 1;
+    res.setHeader("X-PDF-Queue-Active", activeJobs);
+
+    let released = false;
+    const release = () => {
+      if (released) return;
+      released = true;
+      activeJobs -= 1;
+      startNextJob();
+    };
+
+    res.once("finish", release);
+    res.once("close", release);
+    next();
+  };
+
+  if (activeJobs < maxConcurrentJobs) {
+    run();
+    return;
+  }
+
+  waitingJobs.push(run);
+  res.setHeader("X-PDF-Queue-Position", waitingJobs.length);
+};
+
+const getPdfQueueStatus = (req, res) => {
+  res.json({
+    success: true,
+    active: activeJobs,
+    waiting: waitingJobs.length,
+    limit: maxConcurrentJobs,
+  });
+};
+
 // =========================
 // ROUTE
 // =========================
 
-router.post(
-  "/compress",
-  upload.single("pdf"),
-  compressPDF
-);
+router.get("/status", getPdfQueueStatus);
+
+router.post("/compress", upload.single("pdf"), limitPdfConcurrency, compressPDF);
 
 module.exports = router;

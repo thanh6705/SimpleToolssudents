@@ -35,6 +35,7 @@ const compressPDF = async (req, res) => {
       "-sDEVICE=pdfwrite",
       "-dCompatibilityLevel=1.4",
       "-dPDFSETTINGS=/ebook",
+      "-dPDFSTOPONERROR",
       "-dNOPAUSE",
       "-dBATCH",
       "-dSAFER",
@@ -56,14 +57,23 @@ const compressPDF = async (req, res) => {
 
   } catch (error) {
 
-    console.error("PDF compression failed:", error.message);
+    console.error("PDF compression failed:", {
+      message: error.message,
+      stderr: error.stderr,
+      code: error.code,
+      signal: error.signal,
+    });
 
     deleteTempFile(inputPath);
     deleteTempFile(outputPath);
 
-    res.status(500).json({
+    const message = error.code === "ETIMEDOUT"
+      ? "PDF xử lý quá lâu. File có thể quá phức tạp hoặc chứa hình ảnh nặng."
+      : "Ghostscript không thể xử lý PDF này. File có thể bị lỗi hoặc dùng nội dung không tương thích.";
+
+    res.status(error.code === "ETIMEDOUT" ? 504 : 422).json({
       success: false,
-      message: "Failed to compress PDF",
+      message,
     });
   }
 };

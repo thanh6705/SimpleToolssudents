@@ -8,6 +8,7 @@ function PdfCompressor() {
   const [resultSize, setResultSize] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [queueNotice, setQueueNotice] = useState("");
 
   const formatSize = (bytes) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -40,13 +41,30 @@ function PdfCompressor() {
 
     setBusy(true);
     setError("");
+    setQueueNotice("Đang kiểm tra trạng thái máy chủ...");
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 150000);
+
     try {
+      try {
+        const statusResponse = await fetch(`${API_URL}/api/pdf/status`);
+        if (statusResponse.ok) {
+          const status = await statusResponse.json();
+          setQueueNotice(status.active >= status.limit
+            ? "Máy chủ đang bận, file sẽ được xử lý theo lượt..."
+            : "Đang xử lý PDF...");
+        }
+      } catch {
+        setQueueNotice("Đang xử lý PDF...");
+      }
+
       const formData = new FormData();
       formData.append("pdf", file);
 
       const response = await fetch(`${API_URL}/api/pdf/compress`, {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -64,10 +82,15 @@ function PdfCompressor() {
       if (resultUrl) URL.revokeObjectURL(resultUrl);
       setResultUrl(URL.createObjectURL(blob));
       setResultSize(blob.size);
+      setQueueNotice("");
     } catch (compressionError) {
       console.error(compressionError);
-      setError(compressionError.message || "Không thể nén file PDF.");
+      setError(compressionError.name === "AbortError"
+        ? "Xử lý quá lâu. File PDF có thể quá phức tạp hoặc chứa hình ảnh nặng."
+        : compressionError.message || "Không thể nén file PDF.");
+      setQueueNotice("");
     } finally {
+      window.clearTimeout(timeoutId);
       setBusy(false);
     }
   };
@@ -116,14 +139,14 @@ function PdfCompressor() {
             <div className="button-row">
               <button className="secondary-button" onClick={() => inputRef.current?.click()}>Đổi file</button>
               <button className="primary-button" onClick={compressPdf} disabled={busy}>
-                {busy ? "Đang xử lý..." : "Tối ưu PDF"}
+                {busy ? (queueNotice || "Đang xử lý...") : "Tối ưu PDF"}
               </button>
             </div>
             {resultUrl && <button className="download-button" onClick={download}>↓ Tải PDF đã tối ưu</button>}
           </div>
         )}
       </div>
-      <div className="privacy-box"><strong>🔒 Private by design</strong><span>File chỉ tồn tại trong thời gian xử lý, không lưu database và được xóa sau khi hoàn tất.</span></div>
+      <div className="privacy-box"><strong>🔒 Private by design</strong><span>File chỉ tồn tại trong thời gian xử lý, không lưu database và được xóa sau khi hoàn tất.</span><span>Máy chủ xử lý tối đa 2 PDF cùng lúc; file gửi sau sẽ được xếp hàng.</span></div>
     </div>
   );
 }

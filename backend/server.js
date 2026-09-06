@@ -19,6 +19,7 @@ const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
 
 app.use(
   cors({
+    exposedHeaders: ["X-PDF-Queue-Active", "X-PDF-Queue-Position"],
     origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
@@ -68,6 +69,20 @@ app.use("/api/pdf", pdfRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err);
+
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({
+      success: false,
+      message: "PDF vượt quá giới hạn 50 MB.",
+    });
+  }
+
+  if (err.message === "Only PDF files are allowed") {
+    return res.status(415).json({
+      success: false,
+      message: "Chỉ chấp nhận file PDF.",
+    });
+  }
 
   res.status(500).json({
     success: false,
