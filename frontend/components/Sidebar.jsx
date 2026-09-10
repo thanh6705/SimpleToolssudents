@@ -36,6 +36,11 @@ const tools = [
     name: "Text Cleaner",
     icon: "🧹",
   },
+  {
+    path: "/toolbox",
+    name: "Kho công cụ",
+    icon: "✦",
+  },
 ];
 
 function Sidebar({ darkMode, onToggleTheme }) {

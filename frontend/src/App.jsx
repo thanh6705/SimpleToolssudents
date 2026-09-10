@@ -10,6 +10,7 @@ import QrGenerator from "../pages/QrGenerator";
 import WordCounter from "../pages/WordCounter";
 import TextCleaner from "../pages/TextCleaner";
 import FileConverter from "../pages/FileConverter";
+import Toolbox from "../pages/Toolbox";
 
 function App() {
   return (
@@ -59,6 +60,10 @@ function App() {
           <Route
             path="text-cleaner"
             element={<TextCleaner />}
+          />
+          <Route
+            path="toolbox"
+            element={<Toolbox />}
           />
         </Route>
       </Routes>
