@@ -11,6 +11,7 @@ import WordCounter from "../pages/WordCounter";
 import TextCleaner from "../pages/TextCleaner";
 import FileConverter from "../pages/FileConverter";
 import Toolbox from "../pages/Toolbox";
+import Productivity from "../pages/Productivity";
 
 function App() {
   return (
@@ -64,6 +65,10 @@ function App() {
           <Route
             path="toolbox"
             element={<Toolbox />}
+          />
+          <Route
+            path="productivity"
+            element={<Productivity />}
           />
         </Route>
       </Routes>

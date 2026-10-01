@@ -41,6 +41,11 @@ const tools = [
     name: "Kho công cụ",
     icon: "✦",
   },
+  {
+    path: "/productivity",
+    name: "Năng suất",
+    icon: "◷",
+  },
 ];
 
 function Sidebar({ darkMode, onToggleTheme }) {
